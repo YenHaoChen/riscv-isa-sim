@@ -766,6 +766,7 @@ void processor_t::enter_debug_mode(uint8_t cause)
   set_privilege(PRV_M);
   state.dpc->write(state.pc);
   state.pc = DEBUG_ROM_ENTRY;
+  mmu->yield_load_reservation();
 }
 
 void processor_t::debug_output_log(std::stringstream *s)
