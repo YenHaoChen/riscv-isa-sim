@@ -990,11 +990,13 @@ reg_t time_counter_csr_t::read() const noexcept {
 }
 
 void time_counter_csr_t::sync(const reg_t val) noexcept {
-  shadow_val = val;
-  if (proc->extension_enabled(EXT_SSTC)) {
-    const reg_t mip_val = (shadow_val >= state->stimecmp->read() ? MIP_STIP : 0) |
-      (shadow_val + state->htimedelta->read() >= state->vstimecmp->read() ? MIP_VSTIP : 0);
-    state->mip->backdoor_write_with_mask(MIP_STIP | MIP_VSTIP, mip_val);
+  if (!state->debug_mode || !get_field(state->dcsr->read(), DCSR_STOPTIME)) {
+    shadow_val = val;
+    if (proc->extension_enabled(EXT_SSTC)) {
+      const reg_t mip_val = (shadow_val >= state->stimecmp->read() ? MIP_STIP : 0) |
+        (shadow_val + state->htimedelta->read() >= state->vstimecmp->read() ? MIP_VSTIP : 0);
+      state->mip->backdoor_write_with_mask(MIP_STIP | MIP_VSTIP, mip_val);
+    }
   }
 }
 
