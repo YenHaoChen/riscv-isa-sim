@@ -955,7 +955,8 @@ reg_t wide_counter_csr_t::read() const noexcept {
 }
 
 void wide_counter_csr_t::bump(const reg_t howmuch) noexcept {
-  val += howmuch;  // to keep log reasonable size, don't log every bump
+  if (!state->debug_mode || !get_field(state->dcsr->read(), DCSR_STOPCOUNT))
+    val += howmuch;  // to keep log reasonable size, don't log every bump
 }
 
 bool wide_counter_csr_t::unlogged_write(const reg_t val) noexcept {
