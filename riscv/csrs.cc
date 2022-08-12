@@ -1159,14 +1159,20 @@ void dpc_csr_t::verify_permissions(insn_t insn, bool write) const {
 
 dcsr_csr_t::dcsr_csr_t(processor_t* const proc, const reg_t addr):
   csr_t(proc, addr),
-  prv(0),
-  step(false),
+  ebreakvs(false),
+  ebreakvu(false),
   ebreakm(false),
-  ebreakh(false),
   ebreaks(false),
   ebreaku(false),
-  halt(false),
-  cause(0) {
+  stepie(false),
+  stopcount(false),
+  stoptime(false),
+  cause(0),
+  v(false),
+  mprven(false),
+  nmip(false),
+  step(false),
+  prv(0) {
 }
 
 void dcsr_csr_t::verify_permissions(insn_t insn, bool write) const {
@@ -1176,29 +1182,36 @@ void dcsr_csr_t::verify_permissions(insn_t insn, bool write) const {
 }
 
 reg_t dcsr_csr_t::read() const noexcept {
-  uint32_t v = 0;
-  v = set_field(v, DCSR_XDEBUGVER, 1);
-  v = set_field(v, DCSR_EBREAKM, ebreakm);
-  v = set_field(v, DCSR_EBREAKH, ebreakh);
-  v = set_field(v, DCSR_EBREAKS, ebreaks);
-  v = set_field(v, DCSR_EBREAKU, ebreaku);
-  v = set_field(v, DCSR_STOPCYCLE, 0);
-  v = set_field(v, DCSR_STOPTIME, 0);
-  v = set_field(v, DCSR_CAUSE, cause);
-  v = set_field(v, DCSR_STEP, step);
-  v = set_field(v, DCSR_PRV, prv);
-  return v;
+  uint32_t val = 0;
+  val = set_field(val, DCSR_DEBUGVER, 4);
+  val = set_field(val, DCSR_EBREAKVS, ebreakvs);
+  val = set_field(val, DCSR_EBREAKVU, ebreakvu);
+  val = set_field(val, DCSR_EBREAKM, ebreakm);
+  val = set_field(val, DCSR_EBREAKS, ebreaks);
+  val = set_field(val, DCSR_EBREAKU, ebreaku);
+  val = set_field(val, DCSR_STEPIE, stepie);
+  val = set_field(val, DCSR_STOPCOUNT, stopcount);
+  val = set_field(val, DCSR_STOPTIME, stoptime);
+  val = set_field(val, DCSR_CAUSE, cause);
+  val = set_field(val, DCSR_CAUSE, v);
+  val = set_field(val, DCSR_STEP, step);
+  val = set_field(val, DCSR_PRV, prv);
+  return val;
 }
 
 bool dcsr_csr_t::unlogged_write(const reg_t val) noexcept {
-  prv = get_field(val, DCSR_PRV);
-  step = get_field(val, DCSR_STEP);
-  // TODO: ndreset and fullreset
+  ebreakvs = get_field(val, DCSR_EBREAKVS);
+  ebreakvu = get_field(val, DCSR_EBREAKVU);
   ebreakm = get_field(val, DCSR_EBREAKM);
-  ebreakh = get_field(val, DCSR_EBREAKH);
   ebreaks = get_field(val, DCSR_EBREAKS);
   ebreaku = get_field(val, DCSR_EBREAKU);
-  halt = get_field(val, DCSR_HALT);
+  stepie = get_field(val, DCSR_STEPIE);
+  stopcount = get_field(val, DCSR_STOPCOUNT);
+  stoptime = get_field(val, DCSR_STOPTIME);
+  v = get_field(val, DCSR_V);
+  mprven = get_field(val, DCSR_MPRVEN);
+  step = get_field(val, DCSR_STEP);
+  prv = get_field(val, DCSR_PRV);
   return true;
 }
 
@@ -1206,6 +1219,10 @@ void dcsr_csr_t::write_cause_and_prv(uint8_t cause, reg_t prv) noexcept {
   this->cause = cause;
   this->prv = prv;
   log_write();
+}
+
+void dcsr_csr_t::backdoor_write_nmip(const bool nmip) noexcept {
+  this->nmip = nmip;
 }
 
 float_csr_t::float_csr_t(processor_t* const proc, const reg_t addr, const reg_t mask, const reg_t init):
