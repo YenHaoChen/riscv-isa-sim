@@ -3,6 +3,7 @@
 #include "processor.h"
 #include "mmu.h"
 #include "disasm.h"
+#include "platform.h"
 #include <cassert>
 
 #ifdef RISCV_ENABLE_COMMITLOG
@@ -338,6 +339,13 @@ void processor_t::step(size_t n)
     catch(trap_debug_mode&)
     {
       enter_debug_mode(DCSR_CAUSE_SWBP);
+    }
+    catch(trap_nmi&)
+    {
+      state.mepc->write(pc);
+      pc = NMI_VEC;
+      state.mcause->write((reg_t)1 << (isa->get_max_xlen() - 1)); // exception code of 0 (unknown cause)
+      set_privilege(PRV_M);
     }
     catch (wait_for_interrupt_t &t)
     {

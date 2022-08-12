@@ -3,6 +3,7 @@
 #define _RISCV_PLATFORM_H
 
 #define DEFAULT_RSTVEC     0x00001000
+#define NMI_VEC            0x00001000
 #define CLINT_BASE         0x02000000
 #define CLINT_SIZE         0x000c0000
 #define EXT_IO_BASE        0x40000000

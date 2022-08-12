@@ -13,6 +13,11 @@ class trap_debug_mode
   /* Used to enter debug mode, which isn't quite a normal trap. */
 };
 
+class trap_nmi
+{
+  /* non-maskable interrupt */
+};
+
 class trap_t
 {
  public:
