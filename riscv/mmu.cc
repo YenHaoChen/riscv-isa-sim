@@ -57,7 +57,7 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
   bool hlvx = xlate_flags & RISCV_XLATE_VIRT_HLVX;
   reg_t mode = proc->state.prv;
   if (type != FETCH) {
-    if (!proc->state.debug_mode && get_field(proc->state.mstatus->read(), MSTATUS_MPRV)) {
+    if ((!proc->state.debug_mode || get_field(proc->state.dcsr->read(), DCSR_MPRVEN)) && get_field(proc->state.mstatus->read(), MSTATUS_MPRV)) {
       mode = get_field(proc->state.mstatus->read(), MSTATUS_MPP);
       if (get_field(proc->state.mstatus->read(), MSTATUS_MPV) && mode != PRV_M)
         virt = true;
