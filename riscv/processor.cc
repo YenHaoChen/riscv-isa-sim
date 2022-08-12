@@ -878,6 +878,26 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
   }
 }
 
+void processor_t::take_trigger_action(triggers::matched_t& t, reg_t pc)
+{
+  if (state.debug_mode) {
+    return;
+  }
+
+  switch (t.action) {
+    case triggers::ACTION_DEBUG_MODE:
+      enter_debug_mode(DCSR_CAUSE_HWBP);
+      break;
+    case triggers::ACTION_DEBUG_EXCEPTION: {
+      trap_breakpoint trap(state.v, t.address);
+      take_trap(trap, pc);
+      break;
+    }
+    default:
+      abort();
+  }
+}
+
 void processor_t::disasm(insn_t insn)
 {
   uint64_t bits = insn.bits();
