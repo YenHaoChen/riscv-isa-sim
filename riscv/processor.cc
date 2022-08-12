@@ -578,7 +578,8 @@ void processor_t::reset()
 {
   xlen = isa->get_max_xlen();
   state.reset(this, isa->get_max_isa());
-  state.dcsr->halt = halt_on_reset;
+  if (halt_on_reset)
+    enter_debug_mode(DCSR_CAUSE_RESETHALTREQ);
   halt_on_reset = false;
   VU.reset();
 
