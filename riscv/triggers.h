@@ -65,7 +65,16 @@ protected:
   trigger_t() {}
 };
 
-class mcontrol_t : public trigger_t {
+class tdata2_csr_t : public virtual trigger_t {
+public:
+  reg_t tdata2_read(const processor_t * const proc) const noexcept override;
+  bool tdata2_write(processor_t * const proc, const reg_t val) noexcept override;
+
+protected:
+  reg_t tdata2;
+};
+
+class mcontrol_t : public tdata2_csr_t {
 public:
   typedef enum
   {
