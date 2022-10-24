@@ -10,7 +10,7 @@ reg_t tdata2_csr_t::tdata2_read(const processor_t UNUSED * const proc) const noe
 }
 
 bool tdata2_csr_t::tdata2_write(processor_t * const proc, const reg_t val) noexcept {
-  if (dmode && !proc->get_state()->debug_mode) {
+  if (get_dmode() && !proc->get_state()->debug_mode) {
     return false;
   }
   tdata2 = val;
@@ -27,28 +27,25 @@ reg_t mcontrol_t::tdata1_read(const processor_t * const proc) const noexcept {
   v = set_field(v, MCONTROL_SELECT, select);
   v = set_field(v, MCONTROL_TIMING, timing);
   v = set_field(v, MCONTROL_ACTION, action);
-  v = set_field(v, MCONTROL_CHAIN, chain_bit);
+  v = set_field(v, MCONTROL_CHAIN, chain);
   v = set_field(v, MCONTROL_MATCH, match);
   v = set_field(v, MCONTROL_M, m);
   v = set_field(v, MCONTROL_S, s);
   v = set_field(v, MCONTROL_U, u);
-  v = set_field(v, MCONTROL_EXECUTE, execute_bit);
-  v = set_field(v, MCONTROL_STORE, store_bit);
-  v = set_field(v, MCONTROL_LOAD, load_bit);
+  v = set_field(v, MCONTROL_EXECUTE, execute);
+  v = set_field(v, MCONTROL_STORE, store);
+  v = set_field(v, MCONTROL_LOAD, load);
   return v;
 }
 
 bool mcontrol_t::tdata1_write(processor_t * const proc, const reg_t val) noexcept {
-  if (dmode && !proc->get_state()->debug_mode) {
-    return false;
-  }
   auto xlen = proc->get_xlen();
   dmode = get_field(val, MCONTROL_DMODE(xlen));
   hit = get_field(val, CSR_MCONTROL_HIT);
   select = get_field(val, MCONTROL_SELECT);
   timing = get_field(val, MCONTROL_TIMING);
   action = (triggers::action_t) get_field(val, MCONTROL_ACTION);
-  chain_bit = get_field(val, MCONTROL_CHAIN);
+  chain = get_field(val, MCONTROL_CHAIN);
   unsigned match_value = get_field(val, MCONTROL_MATCH);
   switch (match_value) {
     case MATCH_EQUAL:
@@ -66,11 +63,11 @@ bool mcontrol_t::tdata1_write(processor_t * const proc, const reg_t val) noexcep
   m = get_field(val, MCONTROL_M);
   s = get_field(val, MCONTROL_S);
   u = get_field(val, MCONTROL_U);
-  execute_bit = get_field(val, MCONTROL_EXECUTE);
-  store_bit = get_field(val, MCONTROL_STORE);
-  load_bit = get_field(val, MCONTROL_LOAD);
+  execute = get_field(val, MCONTROL_EXECUTE);
+  store = get_field(val, MCONTROL_STORE);
+  load = get_field(val, MCONTROL_LOAD);
   // Assume we're here because of csrw.
-  if (execute_bit)
+  if (execute)
     timing = 0;
   return true;
 }
@@ -104,9 +101,9 @@ bool mcontrol_t::simple_match(unsigned xlen, reg_t value) const {
 
 match_result_t mcontrol_t::memory_access_match(processor_t * const proc, operation_t operation, reg_t address, std::optional<reg_t> data) {
   state_t * const state = proc->get_state();
-  if ((operation == triggers::OPERATION_EXECUTE && !execute_bit) ||
-      (operation == triggers::OPERATION_STORE && !store_bit) ||
-      (operation == triggers::OPERATION_LOAD && !load_bit) ||
+  if ((operation == triggers::OPERATION_EXECUTE && !execute) ||
+      (operation == triggers::OPERATION_STORE && !store) ||
+      (operation == triggers::OPERATION_LOAD && !load) ||
       (state->prv == PRV_M && !m) ||
       (state->prv == PRV_S && !s) ||
       (state->prv == PRV_U && !u)) {
@@ -163,7 +160,7 @@ match_result_t module_t::memory_access_match(action_t * const action, operation_
 
   for (unsigned int i = 0; i < triggers.size(); i++) {
     if (!chain_ok) {
-      chain_ok |= !triggers[i]->chain();
+      chain_ok |= !triggers[i]->get_chain();
       continue;
     }
 
@@ -174,12 +171,12 @@ match_result_t module_t::memory_access_match(action_t * const action, operation_
      * trigger in the chain will never get `hit` set unless the entire chain
      * matches. */
     match_result_t result = triggers[i]->memory_access_match(proc, operation, address, data);
-    if (result != MATCH_NONE && !triggers[i]->chain()) {
-      *action = triggers[i]->action;
+    if (result != MATCH_NONE && !triggers[i]->get_chain()) {
+      *action = triggers[i]->get_action();
       return result;
     }
 
-    chain_ok = result != MATCH_NONE || !triggers[i]->chain();
+    chain_ok = result != MATCH_NONE || !triggers[i]->get_chain();
   }
   return MATCH_NONE;
 }
@@ -191,6 +188,9 @@ reg_t module_t::tdata1_read(const processor_t * const proc, unsigned index) cons
 
 bool module_t::tdata1_write(processor_t * const proc, unsigned index, const reg_t val) noexcept
 {
+  if (triggers[index]->get_dmode() && !proc->get_state()->debug_mode) {
+    return false;
+  }
   bool result = triggers[index]->tdata1_write(proc, val);
   proc->trigger_updated(triggers);
   return result;

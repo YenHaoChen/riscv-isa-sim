@@ -42,27 +42,22 @@ class matched_t
 
 class trigger_t {
 public:
-  virtual match_result_t memory_access_match(processor_t * const proc,
-      operation_t operation, reg_t address, std::optional<reg_t> data) = 0;
+  virtual ~trigger_t() {};
 
   virtual reg_t tdata1_read(const processor_t * const proc) const noexcept = 0;
   virtual bool tdata1_write(processor_t * const proc, const reg_t val) noexcept = 0;
   virtual reg_t tdata2_read(const processor_t * const proc) const noexcept = 0;
   virtual bool tdata2_write(processor_t * const proc, const reg_t val) noexcept = 0;
 
-  virtual bool chain() const { return false; }
-  virtual bool execute() const { return false; }
-  virtual bool store() const { return false; }
-  virtual bool load() const { return false; }
+  virtual bool get_dmode() const = 0;
+  virtual bool get_chain() const { return false; }
+  virtual bool get_execute() const { return false; }
+  virtual bool get_store() const { return false; }
+  virtual bool get_load() const { return false; }
+  virtual action_t get_action() const { return ACTION_DEBUG_EXCEPTION; }
 
-  bool dmode = false;
-  action_t action = ACTION_DEBUG_EXCEPTION;
-  bool hit = false;
-
-  virtual ~trigger_t() {};
-
-protected:
-  trigger_t() {}
+  virtual match_result_t memory_access_match(processor_t * const proc,
+      operation_t operation, reg_t address, std::optional<reg_t> data) = 0;
 };
 
 class tdata2_csr_t : public virtual trigger_t {
@@ -88,13 +83,13 @@ public:
 
   virtual reg_t tdata1_read(const processor_t * const proc) const noexcept override;
   virtual bool tdata1_write(processor_t * const proc, const reg_t val) noexcept override;
-  virtual reg_t tdata2_read(const processor_t * const proc) const noexcept override;
-  virtual bool tdata2_write(processor_t * const proc, const reg_t val) noexcept override;
 
-  virtual bool chain() const override { return chain_bit; }
-  virtual bool execute() const override { return execute_bit; }
-  virtual bool store() const override { return store_bit; }
-  virtual bool load() const override { return load_bit; }
+  virtual bool get_dmode() const override { return dmode; }
+  virtual bool get_chain() const override { return chain; }
+  virtual bool get_execute() const override { return execute; }
+  virtual bool get_store() const override { return store; }
+  virtual bool get_load() const override { return load; }
+  virtual action_t get_action() const override { return action; }
 
   virtual match_result_t memory_access_match(processor_t * const proc,
       operation_t operation, reg_t address, std::optional<reg_t> data) override;
@@ -102,18 +97,19 @@ public:
 private:
   bool simple_match(unsigned xlen, reg_t value) const;
 
-public:
+  bool dmode = false;
+  action_t action = ACTION_DEBUG_EXCEPTION;
+  bool hit = false;
   bool select = false;
   bool timing = false;
-  bool chain_bit = false;
+  bool chain = false;
   match_t match = MATCH_EQUAL;
   bool m = false;
   bool s = false;
   bool u = false;
-  bool execute_bit = false;
-  bool store_bit = false;
-  bool load_bit = false;
-  reg_t tdata2;
+  bool execute = false;
+  bool store = false;
+  bool load = false;
 };
 
 class module_t {
