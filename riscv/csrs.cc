@@ -26,7 +26,8 @@ csr_t::csr_t(processor_t* const proc, const reg_t addr):
   state(proc->get_state()),
   address(addr),
   csr_priv(get_field(addr, 0x300)),
-  csr_read_only(get_field(addr, 0xC00) == 3) {
+  csr_read_only(get_field(addr, 0xC00) == 3),
+  custom_csr(get_field(addr, 0xF00) == 8 || (get_field(addr, 0xC00) != 0 && get_field(addr, 0xF00) != 4 && get_field(addr, 0x0C0) == 3)) {
 }
 
 void csr_t::verify_permissions(insn_t insn, bool write) const {
@@ -45,6 +46,21 @@ void csr_t::verify_permissions(insn_t insn, bool write) const {
     if (state->v && csr_priv <= PRV_HS)
       throw trap_virtual_instruction(insn.bits());
     throw trap_illegal_instruction(insn.bits());
+  }
+
+  if (proc->extension_enabled(EXT_SMSTATEEN) && custom_csr) {
+    if ((state->prv < PRV_M) && !(state->mstateen[0]->read() & MSTATEEN0_CS))
+      throw trap_illegal_instruction(insn.bits());
+
+    if (state->v && !(state->hstateen[0]->read() & HSTATEEN0_CS))
+      throw trap_virtual_instruction(insn.bits());
+
+    if ((proc->extension_enabled('S') && state->prv < PRV_S) && !(state->sstateen[0]->read() & SSTATEEN0_CS)) {
+      if (state->v)
+        throw trap_virtual_instruction(insn.bits());
+      else
+        throw trap_illegal_instruction(insn.bits());
+    }
   }
 }
 

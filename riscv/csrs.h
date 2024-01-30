@@ -61,6 +61,7 @@ class csr_t {
  private:
   const unsigned csr_priv;
   const bool csr_read_only;
+  const bool custom_csr;
 
   // For access to written_value() and unlogged_write():
   friend class rv32_high_csr_t;
